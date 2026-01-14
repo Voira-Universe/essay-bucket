@@ -1,6 +1,6 @@
 # Essay Bucket
 
-> **Internal Tool**: Data ingestion interface for the Eminimoh dataset.
+> **Internal Tool**
 
 Essay Bucket is a specialized data collection dashboard designed to aggregate high-quality, pre-2019 "golden" essays. This dataset serves as the foundational training material ("feeding the Orchestrator") for fine-tuning our specialized Llama models.
 
