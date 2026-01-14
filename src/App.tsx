@@ -72,7 +72,7 @@ function App() {
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8 animate-fade-in">
         <div className="mb-8">
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2 drop-shadow-sm font-sans">
-            Voira
+            Essay Bucket
             <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
               INTERNAL
             </span>
