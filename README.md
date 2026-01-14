@@ -1,11 +1,10 @@
-# Voira: Essay Collection Dashboard
+# Essay Bucket
 
 > **Internal Tool**: Data ingestion interface for the Eminimoh dataset.
 
-This is a specialized data collection dashboard designed to aggregate high-quality, pre-2019 "golden" essays. This dataset serves as the foundational training material ("feeding the Orchestrator") for fine-tuning our specialized Llama models.
+Essay Bucket is a specialized data collection dashboard designed to aggregate high-quality, pre-2019 "golden" essays. This dataset serves as the foundational training material ("feeding the Orchestrator") for fine-tuning our specialized Llama models.
 
 <img width="1233" height="791" alt="Screenshot 2026-01-13 at 5 20 26 PM" src="https://github.com/user-attachments/assets/e1f64021-2294-4911-8b31-b626a9e0e1a8" />
-
 
 ## 🚀 Features
 
