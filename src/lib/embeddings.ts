@@ -1,8 +1,4 @@
-
 import { pipeline, env } from '@xenova/transformers';
-
-// Skip local model checks since we are in the browser
-env.allowLocalModels = false;
 
 // Singleton to hold the pipeline instance
 let embeddingPipeline: any = null;
@@ -11,6 +7,12 @@ export const loadEmbeddingModel = async () => {
   if (embeddingPipeline) return embeddingPipeline;
 
   console.log('Loading embedding model...');
+  
+  // Skip local model checks since we are in the browser
+  env.allowLocalModels = false;
+  // Disable pulling from local cache if needed, but default is usually fine for browser
+  // env.useBrowserCache = true; 
+
   embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
   console.log('Embedding model loaded.');
   return embeddingPipeline;

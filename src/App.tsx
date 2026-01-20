@@ -4,36 +4,54 @@ import { generateEmbedding, loadEmbeddingModel } from './lib/embeddings';
 
 function App() {
   const [formData, setFormData] = useState({
+    title: '',
     prompt: '',
     essay: '',
     source: ''
   });
   const [status, setStatus] = useState<'idle' | 'success' | 'error' | 'submitting'>('idle');
-  const [count, setCount] = useState(0);
+  const [stats, setStats] = useState({ total: 0, titleCount: 0, promptCount: 0, contentOnlyCount: 0 });
 
   useEffect(() => {
-    const fetchCount = async () => {
-      const { count } = await supabase
+    const fetchStats = async () => {
+      // Fetch minimal data to calculate stats on the client
+      const { data, error } = await supabase
         .from('essays')
-        .select('*', { count: 'exact', head: true });
+        .select('title, prompt');
       
-      if (count !== null) setCount(count);
+      if (error) {
+        console.error('Error fetching stats:', error);
+        return;
+      }
+
+      const total = data.length;
+      // Logic: If prompt exists, it's a "Prompt" essay. If no prompt but title exists, it's a "Title" essay.
+      const promptCount = data.filter(r => r.prompt && r.prompt.trim().length > 0).length;
+      const titleCount = data.filter(r => (!r.prompt || r.prompt.trim().length === 0) && r.title).length;
+      const contentOnlyCount = total - promptCount - titleCount;
+
+      setStats({ total, promptCount, titleCount, contentOnlyCount });
     };
     
-    fetchCount();
+    fetchStats();
     // Preload embedding model
     loadEmbeddingModel().catch(err => console.error('Failed to load embedding model:', err));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.prompt || !formData.essay) return;
+    // Validation: Content is required.
+    
+    if (!formData.essay) {
+      alert("Please provide the Essay Content.");
+      return;
+    }
 
     setStatus('submitting');
     
     try {
-      if (!formData.prompt || !formData.essay) {
-        throw new Error('Missing required fields');
+      if (!formData.essay) {
+        throw new Error('Missing essay content');
       }
 
       console.log('Generating embedding...');
@@ -44,6 +62,7 @@ function App() {
         .from('essays')
         .insert([
           { 
+            title: formData.title,
             prompt: formData.prompt, 
             content: formData.essay, 
             source: formData.source,
@@ -58,8 +77,18 @@ function App() {
       }
       
       setStatus('success');
-      setCount(c => c + 1);
-      setFormData({ prompt: '', essay: '', source: '' });
+      // Refresh stats locally to reflect the new addition
+      setStats(prev => {
+        const isPrompt = formData.prompt && formData.prompt.trim().length > 0;
+        const isTitle = !isPrompt && formData.title;
+        return {
+          total: prev.total + 1,
+          promptCount: isPrompt ? prev.promptCount + 1 : prev.promptCount,
+          titleCount: isTitle ? prev.titleCount + 1 : prev.titleCount,
+          contentOnlyCount: (!isPrompt && !isTitle) ? prev.contentOnlyCount + 1 : prev.contentOnlyCount
+        };
+      });
+      setFormData({ title: '', prompt: '', essay: '', source: '' });
       setTimeout(() => setStatus('idle'), 3000);
     } catch (err) {
       console.error('Submission failed:', err);
@@ -71,6 +100,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8 animate-fade-in">
         <div className="mb-8">
+
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2 drop-shadow-sm font-sans">
             Essay Bucket
             <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
@@ -81,24 +111,67 @@ function App() {
             Feed the Orchestrator. Pre-2019 golden samples only.
           </p>
 
-          <div className="mt-8 mb-8">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+            <p className="text-xs text-blue-800 font-medium">
+              Goal: <span className="font-bold">70% Titles</span>, <span className="font-bold">30% Prompts</span>.
+              <br/>
+              Current: <span className="font-bold">{Math.round((stats.titleCount / (stats.total || 1)) * 100)}% Titles</span> ({stats.titleCount}), <span className="font-bold">{Math.round((stats.promptCount / (stats.total || 1)) * 100)}% Prompts</span> ({stats.promptCount})
+              {stats.contentOnlyCount > 0 && <span className="text-gray-500">, {Math.round((stats.contentOnlyCount / (stats.total || 1)) * 100)}% Content Only ({stats.contentOnlyCount})</span>}.
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2 flex overflow-hidden">
+               <div 
+                 className="bg-purple-600 h-2 transition-all duration-500" 
+                 style={{ width: `${(stats.titleCount / (stats.total || 1)) * 100}%` }} 
+                 title="Title Only"
+               />
+               <div 
+                 className="bg-indigo-600 h-2 transition-all duration-500" 
+                 style={{ width: `${(stats.promptCount / (stats.total || 1)) * 100}%` }} 
+                 title="Prompts (Includes Mixed)"
+               />
+               <div 
+                 className="bg-gray-400 h-2 transition-all duration-500" 
+                 style={{ width: `${(stats.contentOnlyCount / (stats.total || 1)) * 100}%` }} 
+                 title="Content Only"
+               />
+            </div>
+          </div>
+
+          <div className="mt-4 mb-8">
             <div className="flex items-center justify-between text-xs font-mono text-gray-500 mb-2">
               <span>Collection Progress</span>
-              <span>{Math.round((count / 2000) * 100)}% ({count.toLocaleString()} / 2,000)</span>
+              <span>{Math.round((stats.total / 2000) * 100)}% ({stats.total.toLocaleString()} / 2,000)</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
               <div 
                 className="bg-gray-900 h-1.5 rounded-full transition-all duration-500 ease-out" 
-                style={{ width: `${Math.min((count / 2000) * 100, 100)}%` }}
+                style={{ width: `${Math.min((stats.total / 2000) * 100, 100)}%` }}
               ></div>
             </div>
           </div>
+
+
+
+
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Title <span className="text-gray-400 font-normal normal-case">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              id="title"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 bg-gray-50 text-gray-900 font-mono text-sm focus:outline-none focus:border-gray-900 focus:bg-white focus:ring-4 focus:ring-gray-100 transition-all duration-200 shadow-inner"
+              placeholder="e.g. The Age of the Essay"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
             <label htmlFor="prompt" className="block text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              Essay Prompt
+              Essay Prompt <span className="text-gray-400 font-normal normal-case">(Optional)</span>
             </label>
             <textarea
               id="prompt"
@@ -107,7 +180,7 @@ function App() {
               placeholder="e.g. Write a persuasive essay about the importance of deep work..."
               value={formData.prompt}
               onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-              required
+              required={false}
               autoFocus
             />
           </div>
@@ -119,6 +192,8 @@ function App() {
               </label>
               <span className="text-xs text-gray-400 font-mono">Pre-2019 Only</span>
             </div>
+
+
             <textarea
               id="essay"
               rows={12}
