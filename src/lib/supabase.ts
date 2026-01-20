@@ -20,6 +20,7 @@ export type Essay = {
   created_at?: string;
   prompt: string;
   content: string;
+  title?: string;
   source: string;
   embedding?: number[]; // Vector embedding for semantic search
 };
